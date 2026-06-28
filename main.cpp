@@ -30,10 +30,10 @@ int TaskCount;
 void GetToday(char today[]) {
     time_t now = time(0);
     tm* ltm = localtime(&now);
-    sprintf(today, "%04d-%02d-%02d",
-            1900 + ltm->tm_year,
+    sprintf(today, "%02d.%02d.%04d",
+            ltm->tm_mday,
             1 + ltm->tm_mon,
-            ltm->tm_mday);
+            1900 + ltm->tm_year);
 }
 
 int FindProjectById(int id) {
@@ -45,61 +45,98 @@ int FindProjectById(int id) {
     return -1;
 }
 
+int CompareDates(const char date1[], const char date2[]) {
+    int d1, m1, y1, d2, m2, y2;
+    sscanf(date1, "%d.%d.%d", &d1, &m1, &y1);
+    sscanf(date2, "%d.%d.%d", &d2, &m2, &y2);
+
+    // Compare years first
+    if (y1 != y2) return (y1 < y2) ? -1 : 1;
+    // Compare months
+    if (m1 != m2) return (m1 < m2) ? -1 : 1;
+    // Compare days
+    if (d1 != d2) return (d1 < d2) ? -1 : 1;
+    return 0; // Dates are equal
+}
+
 bool IsProjectOverdue(int index) {
     char today[15];
     GetToday(today);
-    return (!projects[index].IsComplete && strcmp(projects[index].Deadline, today) < 0);
+    return (!projects[index].IsComplete && CompareDates(projects[index].Deadline, today) < 0);
 }
 
 void AddProject(){
-Project p;
-p.id = nextProjectId++;
-cin.ignore();
-cout << "enter project name: ";
-cin.getline(p.ProjectName, 50);
-cout << endl << "enter deadline: ";
-cin .getline(p.Deadline, 15);
-p.IsComplete=false;
-p.TaskCount=0;
+    if(ProjectCount >= 50) {
+        cout << "Error: Maximum 50 projects!" << endl;
+        return;
+    }
 
-projects[ProjectCount]=p;
-ProjectCount++;
+    Project p;
+    p.id = nextProjectId++;
 
-cout<< "Project added! ID: " << p.id << endl;
+    cin.ignore(1000, '\n');
+
+    cout << "Enter project name: ";
+    cin.getline(p.ProjectName, 50);
+    cout << "Enter deadline (dd.mm.yyyy): ";
+    cin.getline(p.Deadline, 15);
+    p.IsComplete = false;
+    p.TaskCount = 0;
+
+    projects[ProjectCount] = p;
+    ProjectCount++;
+
+    cout << "Project added! ID: " << p.id << endl;
 }
 
 void AddTask(){
-if(ProjectCount == 0) {
-    cout << "No projects! Add a project first." << endl;
-    return;
-}
+    if(ProjectCount == 0) {
+        cout << "No projects! Add a project first." << endl;
+        return;
+    }
 
-int projectId;
-cout << "Enter project ID: ";
-cin >> projectId;
+    int projectId;
+    cout << "Enter project ID: ";
+    cin >> projectId;
 
-int index = FindProjectById(projectId);
-if(index == -1) {
-    cout << "Project not found!" << endl;
-    return;
-}
+    if(cin.fail()) {
+        cin.clear();
+        cin.ignore(1000, '\n');
+        cout << "Invalid input! Please enter a number." << endl;
+        return;
+    }
 
-if(projects[index].TaskCount >= 20) {
-    cout << "Error: Maximum 20 tasks per project!" << endl;
-    return;
-}
+    int index = FindProjectById(projectId);
+    if(index == -1) {
+        cout << "Project not found!" << endl;
+        return;
+    }
 
-cin.ignore();
-ProjectTask t;
-cout << "Task name: ";
-cin.getline(t.TaskName, 50);
-cout << "Task description: ";
-cin.getline(t.description, 100);
-t.IsComplete = false;
+    if(projects[index].TaskCount >= 20) {
+        cout << "Error: Maximum 20 tasks per project!" << endl;
+        return;
+    }
 
-projects[index].Tasks[projects[index].TaskCount]=t;
-projects[index].TaskCount++;
-cout << "Task added!" << endl;
+    cin.ignore(1000, '\n');
+
+    ProjectTask t;
+    cout << "Task name: ";
+    cin.getline(t.TaskName, 50);
+
+    if(strlen(t.TaskName) == 0) {
+        cout << "Task name cannot be empty! Please try again." << endl;
+        cout << "Task name: ";
+        cin.getline(t.TaskName, 50);
+    }
+
+    cout << "Task description: ";
+    cin.getline(t.description, 100);
+
+    t.IsComplete = false;
+
+    projects[index].Tasks[projects[index].TaskCount] = t;
+    projects[index].TaskCount++;
+    cout << "Task added!" << endl;
 }
 
 void DisplayAll(){
